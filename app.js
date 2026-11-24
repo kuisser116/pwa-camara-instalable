@@ -103,6 +103,8 @@ function iniciarApp() {
   $('btn-cancelar-permiso').addEventListener('click', cancelar);
   $('btn-alternar-camara').addEventListener('click', alternar);
   $('btn-apagar-camara').addEventListener('click', apagar);
+  document.addEventListener('visibilitychange', function () { if (document.hidden && stream) apagar(); });
+  window.addEventListener('pagehide', function () { if (stream) detener(); });
   instalar(); ios();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function () {});
 }
