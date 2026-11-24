@@ -30,12 +30,16 @@ pwa-camara-instalable/
 
 ## Flujo de pre-permiso
 
-1. El usuario pulsa "Encender cámara": solo aparece una tarjeta explicativa.
-2. La cámara aún no se enciende.
-3. El usuario pulsa "Entendido, encender": se solicita el permiso nativo.
-4. Si acepta, se muestra la vista previa local.
+1. Al pulsar "Encender cámara" se consulta primero el estado del permiso.
+2. Si ya está concedido, la cámara enciende directo, sin pasos extra.
+3. Si está en `prompt` y es la primera vez, aparece la tarjeta explicativa.
+   Al confirmar se solicita el permiso nativo y se recuerda la elección.
+4. Si está bloqueado, se muestran instrucciones para reactivarlo desde el
+   candado de la barra de direcciones.
 5. "Girar" detiene el stream actual y enciende el otro lente.
 6. "Apagar" ejecuta `track.stop()` en todas las pistas y limpia el video.
+7. "Girar" y "Apagar" permanecen deshabilitados mientras no haya cámara
+   activa; al apagar, se deshabilitan de nuevo.
 
 ## Instalación
 

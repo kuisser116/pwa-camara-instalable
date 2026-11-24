@@ -299,6 +299,11 @@ button:disabled:hover { background: transparent; }
 
 .aviso .acciones { margin-top: 6px; }
 
+.aviso-bloqueado {
+  border-left-color: var(--err);
+  background: #fbf1f1;
+}
+
 .aviso-ios {
   border-left-color: var(--warn);
   background: #fbf8ef;

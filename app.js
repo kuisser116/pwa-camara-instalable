@@ -10,11 +10,13 @@
 'use strict';
 
 const MENSAJE_INICIAL = 'Lista para comenzar.';
+const CLAVE_AVISO_CAMARA = 'pwa-camara-aviso-aceptado';
 
 let streamActual = null;
 let modoCamaraActual = 'environment'; // 'environment' = trasera | 'user' = frontal
 let eventoInstalacionDiferido = null;
 let camaraEnProceso = false;
+let consultaPermisoEnProceso = false;
 
 /* --------------------------------------------------------------- utilidades */
 
@@ -24,6 +26,22 @@ function $(id) {
 
 function nombreLente(modo) {
   return modo === 'environment' ? 'trasera' : 'frontal';
+}
+
+function leerMarcaAviso() {
+  try {
+    return window.localStorage.getItem(CLAVE_AVISO_CAMARA) === '1';
+  } catch (error) {
+    return false;
+  }
+}
+
+function guardarMarcaAviso() {
+  try {
+    window.localStorage.setItem(CLAVE_AVISO_CAMARA, '1');
+  } catch (error) {
+    // Modo privado o almacenamiento restringido: se vuelve a mostrar el aviso.
+  }
 }
 
 function anotar(mensaje) {
@@ -83,7 +101,8 @@ function actualizarBotones() {
 
   const preparar = $('btn-preparar-camara');
   if (preparar) {
-    preparar.disabled = activa || camaraEnProceso;
+    preparar.disabled = activa || camaraEnProceso || consultaPermisoEnProceso;
+    preparar.title = activa ? 'La cámara ya está encendida' : 'Encender la cámara';
     const texto = $('texto-preparar');
     if (texto) {
       texto.textContent = 'Encender cámara ' + nombreLente(modoCamaraActual);
@@ -93,11 +112,13 @@ function actualizarBotones() {
   const alternar = $('btn-alternar-camara');
   if (alternar) {
     alternar.disabled = !activa || camaraEnProceso;
+    alternar.title = activa ? 'Cambiar entre cámara trasera y frontal' : 'Enciende la cámara primero';
   }
 
   const apagar = $('btn-apagar-camara');
   if (apagar) {
     apagar.disabled = !activa;
+    apagar.title = activa ? 'Apagar la cámara y liberar el sensor' : 'La cámara ya está apagada';
   }
 }
 
@@ -160,6 +181,8 @@ function iniciarCamara(modo) {
 
   camaraEnProceso = true;
   actualizarBotones();
+  ocultarAvisoPermiso();
+  ocultarAvisoBloqueado();
   actualizarEstado('Solicitando permiso y encendiendo cámara ' + nombreLente(modo) + '...', 'proceso');
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -229,6 +252,7 @@ function apagarCamara() {
 }
 
 function mostrarAvisoPermiso() {
+  ocultarAvisoBloqueado();
   const aviso = $('aviso-permiso');
   const texto = $('aviso-camara');
 
@@ -256,6 +280,98 @@ function ocultarAvisoPermiso() {
   if (aviso) {
     aviso.hidden = true;
   }
+}
+
+function mostrarAvisoBloqueado() {
+  ocultarAvisoPermiso();
+
+  const aviso = $('aviso-bloqueado');
+  if (!aviso) {
+    return;
+  }
+
+  aviso.hidden = false;
+  actualizarEstado('La cámara está bloqueada. Habilítala desde el candado del navegador.', 'error');
+  anotar('Permiso de cámara bloqueado: se muestran las instrucciones para reactivarlo.');
+
+  if (aviso.scrollIntoView) {
+    aviso.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  const cerrar = $('btn-cerrar-bloqueo');
+  if (cerrar) {
+    cerrar.focus();
+  }
+}
+
+function ocultarAvisoBloqueado() {
+  const aviso = $('aviso-bloqueado');
+  if (aviso) {
+    aviso.hidden = true;
+  }
+}
+
+function consultarEstadoPermisoCamara() {
+  if (!('permissions' in navigator) || !navigator.permissions.query) {
+    return Promise.resolve('prompt');
+  }
+
+  return navigator.permissions.query({ name: 'camera' })
+    .then(function (resultado) {
+      return resultado.state;
+    })
+    .catch(function () {
+      return 'prompt';
+    });
+}
+
+/**
+ * Decide si hace falta el aviso de pre-permiso.
+ * - granted: enciende directo.
+ * - denied: muestra instrucciones para reactivar.
+ * - prompt: muestra el aviso solo si el usuario no lo aceptó antes.
+ */
+function alPulsarEncender() {
+  if (camaraEnProceso || consultaPermisoEnProceso) {
+    return;
+  }
+
+  consultaPermisoEnProceso = true;
+  actualizarBotones();
+  actualizarEstado('Consultando el estado del permiso...', 'proceso');
+
+  consultarEstadoPermisoCamara()
+    .then(function (estado) {
+      anotar('Estado del permiso de cámara: ' + estado + '.');
+
+      if (estado === 'denied') {
+        mostrarAvisoBloqueado();
+        return;
+      }
+
+      if (estado === 'granted') {
+        iniciarCamara(modoCamaraActual);
+        return;
+      }
+
+      if (leerMarcaAviso()) {
+        iniciarCamara(modoCamaraActual);
+        return;
+      }
+
+      mostrarAvisoPermiso();
+    })
+    .catch(function () {
+      if (leerMarcaAviso()) {
+        iniciarCamara(modoCamaraActual);
+      } else {
+        mostrarAvisoPermiso();
+      }
+    })
+    .finally(function () {
+      consultaPermisoEnProceso = false;
+      actualizarBotones();
+    });
 }
 
 /* ------------------------------------------------------------ instalación */
@@ -376,14 +492,23 @@ function iniciar() {
 
   const preparar = $('btn-preparar-camara');
   if (preparar) {
-    preparar.addEventListener('click', mostrarAvisoPermiso);
+    preparar.addEventListener('click', alPulsarEncender);
   }
 
   const confirmar = $('btn-confirmar-permiso');
   if (confirmar) {
     confirmar.addEventListener('click', function () {
+      guardarMarcaAviso();
       ocultarAvisoPermiso();
       iniciarCamara(modoCamaraActual);
+    });
+  }
+
+  const cerrarBloqueo = $('btn-cerrar-bloqueo');
+  if (cerrarBloqueo) {
+    cerrarBloqueo.addEventListener('click', function () {
+      ocultarAvisoBloqueado();
+      actualizarEstado('Cámara apagada. Habilita el permiso y vuelve a intentarlo.', 'apagada');
     });
   }
 
