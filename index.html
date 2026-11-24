@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#e7e7e4" />
+  <meta name="description" content="PWA instalable con acceso ético a la cámara frontal y trasera." />
+  <title>Inspección Visual PWA</title>
+
+  <!-- Rutas relativas: obligatorias para GitHub Pages en subdirectorio -->
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+
+  <!-- iOS: icono de pantalla de inicio y modo aplicación -->
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Inspección" />
+</head>
+<body>
+
+  <header>
+    <div class="marca">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      <span>Inspección</span>
+    </div>
+
+    <div class="header-acciones">
+      <button type="button" id="btn-instalar" class="btn-instalar" hidden title="Instalar aplicación" aria-label="Instalar aplicación">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Instalar</span>
+      </button>
+      <span id="badge-camara" class="dot" title="Cámara apagada" role="status" aria-label="Estado de la cámara"></span>
+    </div>
+  </header>
+
+  <main>
+
+    <section class="panel">
+
+      <div class="visor-wrap" id="visor-wrap">
+        <video id="visor-camara" autoplay playsinline webkit-playsinline muted aria-label="Vista previa de la cámara"></video>
+        <div class="visor-placeholder" aria-hidden="true">
+          <svg class="ic" viewBox="0 0 24 24">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <span>Cámara apagada</span>
+        </div>
+      </div>
+
+      <div class="estado">
+        <span class="dot" id="punto-estado" aria-hidden="true"></span>
+        <span id="mensaje-estado" aria-live="polite">Lista para comenzar.</span>
+      </div>
+
+      <div class="acciones">
+        <button type="button" id="btn-preparar-camara" class="btn-texto btn-primario">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          <span id="texto-preparar">Encender cámara</span>
+        </button>
+
+        <button type="button" id="btn-alternar-camara" class="btn-texto" disabled>
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 1l4 4-4 4"/>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+            <path d="M7 23l-4-4 4-4"/>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+          <span>Girar</span>
+        </button>
+
+        <button type="button" id="btn-apagar-camara" class="btn-texto" disabled>
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+          <span>Apagar</span>
+        </button>
+      </div>
+
+      <div id="aviso-permiso" class="aviso" hidden aria-labelledby="aviso-titulo">
+        <h2 id="aviso-titulo">Antes de encender la cámara</h2>
+        <p id="aviso-camara">Se encenderá la cámara trasera y verás la vista previa en esta pantalla.</p>
+        <ul>
+          <li>La imagen se procesa únicamente en este dispositivo.</li>
+          <li>Ninguna foto o video se envía a servidores externos.</li>
+          <li>Puedes apagar la cámara en cualquier momento.</li>
+        </ul>
+        <div class="acciones">
+          <button type="button" id="btn-confirmar-permiso" class="btn-texto btn-primario">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <span>Entendido, encender</span>
+          </button>
+          <button type="button" id="btn-cancelar-permiso" class="btn-texto">Ahora no</button>
+        </div>
+      </div>
+
+      <div id="aviso-ios" class="aviso aviso-ios" hidden aria-labelledby="aviso-ios-titulo">
+        <h2 id="aviso-ios-titulo">Instalar en iPhone o iPad</h2>
+        <p>Safari no muestra un botón automático de instalación. Para agregar la app a tu pantalla de inicio:</p>
+        <ol>
+          <li>Toca el botón Compartir.</li>
+          <li>Elige "Agregar a inicio".</li>
+          <li>Confirma con "Agregar".</li>
+        </ol>
+      </div>
+
+      <p class="pie">Vista previa local. Nada se sube a internet.</p>
+
+    </section>
+
+    <details class="log">
+      <summary title="Bitácora" aria-label="Bitácora">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 17l6-6-6-6"/>
+          <path d="M12 19h8"/>
+        </svg>
+        <span id="ultimo-aviso">Listo</span>
+      </summary>
+      <ul id="bitacora"></ul>
+    </details>
+
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
